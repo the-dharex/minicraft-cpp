@@ -10,7 +10,7 @@ more about Minicraft take a look at [our website](https://minicraftplus.github.i
 our [Discord](https://discord.me/minicraft), or check out
 our [wiki.gg Wiki](https://minicraft.wiki.gg/wiki/).
 
-Check the [releases](https://github.com/minicraftplus/minicraft-plus-revived/releases) page to download the latest
+Check the [releases](https://github.com/the-dharex/minicraft-cpp/releases) page to download the latest
 version, or older versions.
 
 ## Major features
@@ -21,8 +21,6 @@ version, or older versions.
     * Score
     * Survival
 * Saving and loading
-* Multiplayer mode and an account system (Now supported
-  by [El-Virus](https://www.github.com/ElVir-Software/minicraft-plus-online))
 * More mobs
 * Personal crafting menu
 * Beds
