@@ -1,0 +1,43 @@
+# CMake build directories
+/build/
+/build_switch/
+/out/
+/cmake-build-*/
+
+# Generated build artifacts
+*.exe
+*.dll
+*.lib
+*.a
+*.o
+*.obj
+*.pdb
+*.ilk
+*.dSYM/
+
+# CMake-generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sln
+*.suo
+*.user
+*.vcxproj
+*.vcxproj.filters
+*.code-workspace
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
