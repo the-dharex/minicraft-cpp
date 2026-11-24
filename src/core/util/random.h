@@ -9,7 +9,7 @@
 namespace minicraft {
 namespace util {
 
-// Deterministic Java-compatible 48-bit LCG PRNG.
+// Deterministic 48-bit LCG PRNG.
 class Random {
  public:
   explicit Random(int64_t seed = 0x123456789ABCDEFLL) { SetSeed(seed); }

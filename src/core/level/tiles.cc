@@ -47,7 +47,7 @@ const Tile* Tiles::Get(uint16_t id) {
 
 const Tile* Tiles::Find(std::string_view name) {
   if (!initialized_) InitTiles();
-  // Strip any legacy metadata suffix from the first '_' (matches Java Tiles.get).
+  // Strip any legacy metadata suffix from the first '_'.
   const size_t underscore = name.find('_');
   if (underscore != std::string_view::npos) {
     name = name.substr(0, underscore);

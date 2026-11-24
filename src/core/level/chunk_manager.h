@@ -18,9 +18,6 @@ class Tile;
 struct Chunk {
   static constexpr int32_t kSize = 64;
   static constexpr int32_t kArea = kSize * kSize;
-
-  // Stage progression mirrors Java ChunkManager to allow dropping temporary
-  // noise buffers once stairs/structures finish generating.
   static constexpr int32_t kStageTerrain = 0;
   static constexpr int32_t kStageUnfinishedStairs = 1;
   static constexpr int32_t kStageFinished = 2;

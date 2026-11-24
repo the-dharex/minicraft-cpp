@@ -543,7 +543,7 @@ void OpenGLRenderBackend::RenderFrame(const FrameRenderData& frame) {
         float y0 = static_cast<float>(cmd.rect.y);
         float w = static_cast<float>(cmd.rect.w);
         float h = static_cast<float>(cmd.rect.h);
-        // 4 pixel-crisp edges matching Java Graphics2D.drawRect(x, y, w, h).
+
         PushQuad(x0, y0, x0 + w + 1.0f, y0 + 1.0f, 0, 0, 0, 0, r, g, b, a, 1.0f, 0.0f);
         PushQuad(x0, y0 + h, x0 + w + 1.0f, y0 + h + 1.0f, 0, 0, 0, 0, r, g, b, a, 1.0f, 0.0f);
         PushQuad(x0, y0, x0 + 1.0f, y0 + h + 1.0f, 0, 0, 0, 0, r, g, b, a, 1.0f, 0.0f);

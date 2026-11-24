@@ -956,7 +956,7 @@ bool Load::LoadWorld(const platform::IFileSystem& fs, WorldSaveContext& ctx) {
     return false;
   }
 
-  // 1. Native C++ binary container (`world.mcbin`) with `.bak` recovery.
+  // Native C++ binary container (`world.mcbin`) with `.bak` recovery.
   const std::string bin_path =
       Save::JoinWorldPath(ctx.world_dir, kBinaryWorldFileName);
   const std::string bak_path =
@@ -982,7 +982,7 @@ bool Load::LoadWorld(const platform::IFileSystem& fs, WorldSaveContext& ctx) {
     return false;
   }
 
-  // 2. Delegate legacy Java `.miniplussave` / text world folders to LegacyLoad.
+  // Delegate legacy Java `.miniplussave` / text world folders to LegacyLoad.
   if (LegacyLoad::IsLegacyWorldDir(fs, ctx.world_dir)) {
     return LegacyLoad::LoadWorld(fs, ctx);
   }
