@@ -16,6 +16,7 @@
 #include "core/entity/player.h"
 #include "core/entity/projectiles.h"
 #include "core/game/game_state.h"
+#include "core/game/renderer.h"
 #include "core/game/updater.h"
 #include "core/game/world.h"
 #include "core/gfx/color.h"
@@ -4806,6 +4807,153 @@ int main() {
                   statues_after == 0,
               "LoadChunk links new dungeon stairs without overwriting existing DungeonBossRoom");
       }
+    }
+
+    // 39. ScoreMode multiplier HUD, Quest expansion (L = 30 ticks), and Potion hide/simplify HUD parity
+    {
+      std::cout << "[39/39] Testing ScoreMode multiplier HUD, Quest expansion, and Potion HUD parity...\n";
+      auto& gs = game::GameState::Instance();
+      const std::string prev_mode = io::Settings::GetString("mode");
+      const bool prev_quests = io::Settings::GetBool("quests");
+      const bool prev_showquests = io::Settings::GetBool("showquests");
+      const bool prev_tutorials = io::Settings::GetBool("tutorials");
+
+      Check(world.InitWorld(&fs, temp_dir, "HudParityWorld", true, int64_t{123},
+                            &input, &updater),
+            "InitWorld succeeds for HudParityWorld");
+      updater.ClearDisplays();
+      entity::Player* hp = world.GetPlayer();
+      Check(hp != nullptr, "HudParityWorld has active player");
+
+      game::Renderer hud_renderer;
+      DummyRenderBackend hud_backend;
+      gfx::Screen hud_scr(&linker);
+      platform::PlatformContext hud_plat = plat;
+      hud_plat.renderer = &hud_backend;
+
+      // Helper to check if Font::Draw rendered a specific ASCII glyph at (exp_x, exp_y)
+      auto find_glyph_cmd = [&](char ch, int32_t exp_x, int32_t exp_y)
+          -> const platform::DrawCmd* {
+        DummyRenderBackend ref_be;
+        gfx::Screen ref_scr(&linker);
+        gfx::Font::Draw(std::string(1, ch), &ref_scr, 0, 0, gfx::color::kWhite);
+        ref_scr.Flush(&ref_be);
+        if (ref_be.last_commands.empty()) return nullptr;
+        const auto& ref = ref_be.last_commands.front();
+        for (const auto& cmd : hud_backend.last_commands) {
+          if (cmd.type == platform::DrawCmdType::kSprite &&
+              cmd.texture_id == ref.texture_id &&
+              cmd.sprite.x == exp_x && cmd.sprite.y == exp_y &&
+              cmd.sprite.src_x == ref.sprite.src_x &&
+              cmd.sprite.src_y == ref.sprite.src_y) {
+            return &cmd;
+          }
+        }
+        return nullptr;
+      };
+
+      // 39a. ScoreMode multiplier: hidden at X1, gold at X2..X49, red at X50
+      io::Settings::Set("mode", std::string("minicraft.settings.mode.score"));
+      gs.score_time = 20000;
+      hp->ResetMultiplier();
+      Check(hp->GetMultiplier() == 1, "ScoreMode initial multiplier is 1");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      // "X1" would be at x = 288 - 16 - 2 = 270, y = 20
+      Check(find_glyph_cmd('X', gfx::Screen::w - 16 - 2, 20) == nullptr,
+            "ScoreMode hides multiplier HUD when multiplier == 1");
+
+      hp->AddMultiplier(2);  // X3
+      Check(hp->GetMultiplier() == 3, "AddMultiplier increases ScoreMode multiplier to 3");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      const auto* x3_cmd = find_glyph_cmd('X', gfx::Screen::w - 16 - 2, 20);
+      const uint32_t gold_rgba =
+          gfx::color::RgbIntToRgba(gfx::color::Get(1, 255, 204, 0));
+      Check(x3_cmd != nullptr && x3_cmd->sprite.tint_rgba == gold_rgba &&
+                find_glyph_cmd('3', gfx::Screen::w - 8 - 2, 20) != nullptr,
+            "ScoreMode renders X3 in gold color at (w-18, 20)");
+
+      hp->AddMultiplier(100);  // Clamped to kMaxMultiplier = 50 -> "X50"
+      Check(hp->GetMultiplier() == entity::Player::kMaxMultiplier,
+            "ScoreMode multiplier clamps to kMaxMultiplier (50)");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      const auto* x50_cmd = find_glyph_cmd('X', gfx::Screen::w - 24 - 2, 20);
+      const uint32_t red_rgba = gfx::color::RgbIntToRgba(gfx::color::kRed);
+      Check(x50_cmd != nullptr && x50_cmd->sprite.tint_rgba == red_rgba,
+            "ScoreMode renders X50 in kRed at max multiplier");
+
+      // 39b. Quest expansion: single tap on L sets quest_expanding = 30 (decays by 1/tick -> 29 after tick)
+      io::Settings::Set("tutorials", false);
+      io::Settings::Set("quests", true);
+      io::Settings::Set("showquests", true);
+      screen::TutorialDisplayHandler::Reset(false);
+      // Force-unlock multiple quests across series to verify 2 collapsed vs up to 5 expanded
+      int32_t unlocked_quests = 0;
+      for (auto& qs : util::AdvancementSystem::Instance().QuestSeriesList()) {
+        if (!qs) continue;
+        qs->unlocked = true;
+        qs->completed = false;
+        for (const auto& qk : qs->quest_order) {
+          auto it = qs->quests.find(qk);
+          if (it != qs->quests.end() && it->second) {
+            it->second->unlocked = true;
+            it->second->completed = false;
+            ++unlocked_quests;
+          }
+        }
+      }
+      Check(unlocked_quests >= 3 && screen::TutorialDisplayHandler::InQuests(),
+            "Multiple quests unlocked and InQuests() active");
+
+      hp->quest_expanding = 0;
+      input.ReleaseAll();
+      input.PushKeyEvents({{"L", true, false}, {"L", false, false}});
+      updater.Tick(world, input, plat, temp_dir);
+      Check(hp->quest_expanding == 30,
+            "Single tap on L sets quest_expanding to 30 ticks matching Java");
+
+      // 39c. Potion HUD: full mode formats "(P to hide!)" without raw "%s", O toggles 1-char horizontal row, P hides all
+      hp->quest_expanding = 0;
+      io::Settings::Set("showquests", false);
+      hp->potion_effects.clear();
+      hp->AddPotionEffect(entity::Player::PotionEffect::kSpeed, 3600);
+      hp->AddPotionEffect(entity::Player::PotionEffect::kLight, 1800);
+      hp->show_potion_effects = true;
+      hp->simp_potion_effects = false;
+
+      util::Localization::Instance().ChangeLanguage("en-us");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      // "(P to hide!)" starts with '(' at (180, 9) and 'P' at (188, 9), NOT '%' at (188, 9)
+      Check(find_glyph_cmd('(', 180, 9) != nullptr &&
+                find_glyph_cmd('P', 188, 9) != nullptr &&
+                find_glyph_cmd('%', 188, 9) == nullptr,
+            "Full potion HUD formats key mapping into hide_hint ('(P to hide!)') without literal %s");
+
+      // Toggle O immediately (no 10-tick cooldown blocking O!) -> horizontal 1-char icons at y=9:
+      // 2 effects: idx=0 ('S') at Screen::w - 17 - 8 = 263, idx=1 ('L') at Screen::w - 17 = 271
+      input.ReleaseAll();
+      input.PushKeyEvents({{"O", true, false}, {"O", false, false}});
+      updater.Tick(world, input, plat, temp_dir);
+      Check(hp->simp_potion_effects, "Pressing O toggles simp_potion_effects immediately");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      Check(find_glyph_cmd('(', 180, 9) == nullptr &&
+                find_glyph_cmd('S', gfx::Screen::w - 17 - 8, 9) != nullptr &&
+                find_glyph_cmd('L', gfx::Screen::w - 17, 9) != nullptr,
+            "Simplified potion HUD renders 1-letter colored icons horizontally at (w-17-(N-1-i)*8, 9)");
+
+      // Toggle P -> hides all potion HUD elements
+      input.ReleaseAll();
+      input.PushKeyEvents({{"P", true, false}, {"P", false, false}});
+      updater.Tick(world, input, plat, temp_dir);
+      Check(!hp->show_potion_effects, "Pressing P toggles show_potion_effects off");
+      hud_renderer.Render(world, updater, hud_scr, hud_plat, temp_dir, 60, 60);
+      Check(find_glyph_cmd('S', gfx::Screen::w - 17 - 8, 9) == nullptr &&
+                find_glyph_cmd('L', gfx::Screen::w - 17, 9) == nullptr,
+            "Hiding potion effects (P) suppresses potion HUD rendering");
+
+      io::Settings::Set("mode", prev_mode);
+      io::Settings::Set("quests", prev_quests);
+      io::Settings::Set("showquests", prev_showquests);
+      io::Settings::Set("tutorials", prev_tutorials);
     }
 
     world.UnloadWorld(&clock);

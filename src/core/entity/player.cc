@@ -344,12 +344,12 @@ void Player::Tick() {
       show_potion_effects = !show_potion_effects;
       cooldown_info_ = 10;
     }
-    if (input_->InputPressed("simpPotionEffects") && cooldown_info_ == 0) {
+    if (input_->InputPressed("simpPotionEffects")) {
       simp_potion_effects = !simp_potion_effects;
-      cooldown_info_ = 10;
     }
-    if (input_->InputDown("expandQuestDisplay")) {
-      quest_expanding = 1;
+    if (input_->InputPressed("expandQuestDisplay") ||
+        input_->InputDown("expandQuestDisplay")) {
+      quest_expanding = 30;
     }
   }
 

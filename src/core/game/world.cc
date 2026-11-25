@@ -238,6 +238,10 @@ bool World::InitWorld(const platform::IFileSystem* fs,
 
     screen::CraftingDisplay::ResetRecipeUnlocks();
     util::AdvancementSystem::Instance().ResetAll();
+    if (player_) {
+      util::AdvancementSystem::Instance().TriggerInventoryChanged(
+          player_->GetInventory().ToSnapshot());
+    }
     screen::TutorialDisplayHandler::Reset(true);
     screen::SignDisplay::ResetSignTexts();
   }

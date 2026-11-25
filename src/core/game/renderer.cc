@@ -268,7 +268,7 @@ void Renderer::RenderGui(const World& world, Updater& updater,
     updater.AdvanceNoteTickIfNeeded(false);
   }
 
-  // Score mode timer & score
+  // Score mode timer, score, and multiplier
   if (gs.IsScoreMode()) {
     int32_t seconds = static_cast<int32_t>(
         std::ceil(gs.score_time / static_cast<double>(GameState::kNormSpeed)));
@@ -276,11 +276,11 @@ void Renderer::RenderGui(const World& world, Updater& updater,
     int32_t hours = minutes / 60;
     minutes %= 60;
     seconds %= 60;
-    int32_t time_col = gfx::color::Get(0, 555);
+    int32_t time_col = gfx::color::kWhite;
     if (gs.score_time < 3600) {
-      time_col = gfx::color::Get(400, 555);
+      time_col = gfx::color::kRed;
     } else if (gs.score_time < 18000) {
-      time_col = gfx::color::Get(330, 555);
+      time_col = gfx::color::kYellow;
     }
     gfx::Font::Draw(
         util::Localization::GetLocalized(
@@ -291,12 +291,20 @@ void Renderer::RenderGui(const World& world, Updater& updater,
     const std::string score_str = util::Localization::GetLocalized(
         "minicraft.display.gui.score.current_score", player->GetScore());
     gfx::Font::Draw(score_str, &screen,
-                    gfx::Screen::w - gfx::Font::TextWidth(score_str) - 2, 11,
+                    gfx::Screen::w - gfx::Font::TextWidth(score_str) - 2, 3 + 8,
                     gfx::color::kWhite);
-    const std::string mult_str = "X" + std::to_string(player->GetMultiplier());
-    gfx::Font::Draw(mult_str, &screen,
-                    gfx::Screen::w - gfx::Font::TextWidth(mult_str) - 2, 20,
-                    gfx::color::kWhite);
+
+    if (player->GetMultiplier() > 1) {
+      const int32_t mult_col =
+          player->GetMultiplier() < entity::Player::kMaxMultiplier
+              ? gfx::color::Get(1, 255, 204, 0)
+              : gfx::color::kRed;
+      const std::string mult_str =
+          "X" + std::to_string(player->GetMultiplier());
+      gfx::Font::Draw(mult_str, &screen,
+                      gfx::Screen::w - gfx::Font::TextWidth(mult_str) - 2,
+                      4 + 2 * 8, mult_col);
+    }
   }
 
   // Tool durability %
@@ -326,28 +334,29 @@ void Renderer::RenderGui(const World& world, Updater& updater,
 
   // Potion effects overlay (P to toggle visibility, O to toggle compact mode)
   if (player->show_potion_effects && !player->potion_effects.empty()) {
-    const std::string hide_hint = util::Localization::GetLocalized(
-        "minicraft.display.gui.potion_effects.hide_hint");
+    std::vector<std::pair<int32_t, int32_t>> sorted_effects(
+        player->potion_effects.begin(), player->potion_effects.end());
+    std::sort(sorted_effects.begin(), sorted_effects.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+    const int32_t total_effects = static_cast<int32_t>(sorted_effects.size());
+
     if (!player->simp_potion_effects) {
+      const std::string potion_key =
+          screen::DisplayHost::Instance().input
+              ? screen::DisplayHost::Instance().input->GetMapping(
+                    "potionEffects")
+              : "P";
+      const std::string hide_hint = util::Localization::GetLocalized(
+          "minicraft.display.gui.potion_effects.hide_hint", potion_key);
       gfx::Font::DrawBackground(hide_hint, &screen, 180,
                                 9 + potion_render_offset_, gfx::color::kWhite);
-    }
-    int32_t idx = 0;
-    for (const auto& [eff_id, dur] : player->potion_effects) {
-      const int32_t p_time = dur / GameState::kNormSpeed;
-      const int32_t mins = p_time / 60;
-      const int32_t secs = p_time % 60;
-      const std::string pname = util::Localization::GetLocalized(PotionName(eff_id));
-      if (player->simp_potion_effects) {
-        std::string abbr = pname.empty() ? "?" : pname.substr(0, 1);
-        char sbuf[32];
-        std::snprintf(sbuf, sizeof(sbuf), "%s %d:%02d", abbr.c_str(), mins, secs);
-        const int32_t tx = gfx::Screen::w - gfx::Font::TextWidth(sbuf) - 17;
-        gfx::Font::DrawBackground(
-            sbuf, &screen, tx,
-            9 + idx * gfx::Font::TextHeight() + potion_render_offset_,
-            PotionColor(eff_id));
-      } else {
+      for (int32_t idx = 0; idx < total_effects; ++idx) {
+        const auto [eff_id, dur] = sorted_effects[static_cast<size_t>(idx)];
+        const int32_t p_time = dur / GameState::kNormSpeed;
+        const int32_t mins = p_time / 60;
+        const int32_t secs = p_time % 60;
+        const std::string pname =
+            util::Localization::GetLocalized(PotionName(eff_id));
         const std::string text = util::Localization::GetLocalized(
             "minicraft.display.gui.potion_effects.potion_dur", pname, mins,
             secs);
@@ -356,7 +365,19 @@ void Renderer::RenderGui(const World& world, Updater& updater,
             17 + idx * gfx::Font::TextHeight() + potion_render_offset_,
             PotionColor(eff_id));
       }
-      ++idx;
+    } else {
+      for (int32_t idx = 0; idx < total_effects; ++idx) {
+        const int32_t eff_id = sorted_effects[static_cast<size_t>(idx)].first;
+        const char* raw_name = PotionName(eff_id);
+        const std::string abbr =
+            (raw_name && raw_name[0] != '\0') ? std::string(1, raw_name[0])
+                                              : "?";
+        const int32_t tx =
+            gfx::Screen::w - 17 - (total_effects - 1 - idx) * 8;
+        gfx::Font::DrawBackground(abbr, &screen, tx,
+                                  9 + potion_render_offset_,
+                                  PotionColor(eff_id));
+      }
     }
   }
 
@@ -475,34 +496,37 @@ void Renderer::RenderQuestsDisplay(const World& world,
 
   const bool expanded =
       world.GetPlayer() != nullptr && world.GetPlayer()->quest_expanding > 0;
+  const size_t max_len = expanded ? 5 : 2;
   std::vector<std::unique_ptr<screen::ListEntry>> entries;
   const auto& series = util::AdvancementSystem::Instance().QuestSeriesList();
   for (const auto& qs : series) {
-    if (!qs || !qs->unlocked || qs->completed) continue;
-    if (expanded) {
-      int32_t done_cnt = 0;
-      const int32_t total_cnt = static_cast<int32_t>(qs->quests.size());
-      for (const auto& [qk, q] : qs->quests) {
-        (void)qk;
-        if (q && q->completed) ++done_cnt;
-      }
-      entries.push_back(std::make_unique<screen::StringEntry>(
-          util::Localization::GetLocalized(qs->key) + " (" +
-              std::to_string(done_cnt) + "/" + std::to_string(total_cnt) + ")",
-          gfx::color::kWhite, false));
-      if (entries.size() >= 5) break;
-    } else {
-      for (const auto& qk : qs->quest_order) {
-        auto it = qs->quests.find(qk);
-        if (it == qs->quests.end() || !it->second) continue;
-        const auto& q = *it->second;
-        if (!q.unlocked || q.completed) continue;
+    if (!qs || !qs->IsDisplayableAtStatus()) continue;
+    for (const auto& qk : qs->quest_order) {
+      auto it = qs->quests.find(qk);
+      if (it == qs->quests.end() || !it->second) continue;
+      const auto& q = *it->second;
+      if (!q.IsDisplayableAtStatus()) continue;
+
+      if (!expanded) {
         entries.push_back(std::make_unique<screen::StringEntry>(
-            util::Localization::GetLocalized(q.key), gfx::color::kWhite, false));
-        if (entries.size() >= 2) break;
+            util::Localization::GetLocalized(q.key), gfx::color::kWhite,
+            false));
+      } else if (q.ShouldAllCriteriaBeCompleted() &&
+                 q.TotalNumCriteria() > 1) {
+        entries.push_back(std::make_unique<screen::StringEntry>(
+            util::Localization::GetLocalized(qs->key) + " (" +
+                std::to_string(q.NumCriteriaCompleted()) + "/" +
+                std::to_string(q.TotalNumCriteria()) + ")",
+            gfx::color::kWhite, false));
+      } else {
+        entries.push_back(std::make_unique<screen::StringEntry>(
+            util::Localization::GetLocalized(qs->key), gfx::color::kWhite,
+            false));
       }
-      if (entries.size() >= 2) break;
+
+      if (entries.size() >= max_len) break;
     }
+    if (entries.size() >= max_len) break;
   }
 
   if (!entries.empty()) {
