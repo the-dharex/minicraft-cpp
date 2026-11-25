@@ -3455,6 +3455,53 @@ int main() {
                 !level::Tiles::Get(level::Tiles::kGrass)->ConnectsToSand(t_lvl, 0, 0),
             "ConnectsToSand matches Java Minicraft+ across all tile types");
 
+      // 26f. HardRock ring around StairsUp connects to adjacent HardRock neighbors,
+      // and WallTile L-corners (!diag, no corner sheet) render base_rect inner corner.
+      tile_linker.SetSheet(gfx::SpriteType::kTile, "hardrock",
+                           {0, 800, 0, 16, 16, true});
+      tile_linker.SetSheet(gfx::SpriteType::kTile, "hardrock_border",
+                           {0, 900, 0, 24, 24, true});
+      tile_linker.SetSheet(gfx::SpriteType::kTile, "hardrock_corner",
+                           {0, 1000, 0, 16, 16, true});
+      for (int32_t dy = -1; dy <= 1; ++dy) {
+        for (int32_t dx = -1; dx <= 1; ++dx) {
+          t_lvl.SetTile(6 + dx, 6 + dy, level::Tiles::kHardRock, 0);
+        }
+      }
+      t_lvl.SetTile(6, 6, level::Tiles::kStairsUp, 0);
+      // Top-left HardRock at (5, 5) has r=HardRock(6,5), d=HardRock(5,6), dr=StairsUp(6,6) (!diag)
+      tile_screen.Clear(0);
+      tile_screen.SetOffset(5 * 16, 5 * 16);
+      level::Tiles::Get(level::Tiles::kHardRock)
+          ->Render(&tile_screen, t_lvl, 5, 5);
+      tile_screen.Flush(&tile_backend);
+      Check(tile_backend.last_commands.size() == 8 &&
+                tile_backend.last_commands[4].sprite.src_x == 900 &&
+                tile_backend.last_commands[4].sprite.src_y == 0 &&
+                tile_backend.last_commands[5].sprite.src_x == 908 &&
+                tile_backend.last_commands[5].sprite.src_y == 0 &&
+                tile_backend.last_commands[6].sprite.src_x == 900 &&
+                tile_backend.last_commands[6].sprite.src_y == 8 &&
+                tile_backend.last_commands[7].sprite.src_x == 1008 &&
+                tile_backend.last_commands[7].sprite.src_y == 8,
+            "HardRock ring around StairsUp connects to adjacent HardRock tiles and renders inner corner");
+
+      // L-corner StoneWall at (2, 2) with r=StoneWall(3,2), d=StoneWall(2,3), dr=Dirt(3,3) (!diag)
+      t_lvl.SetTile(2, 2, level::Tiles::kStoneWall, 0);
+      t_lvl.SetTile(3, 2, level::Tiles::kStoneWall, 0);
+      t_lvl.SetTile(2, 3, level::Tiles::kStoneWall, 0);
+      t_lvl.SetTile(3, 3, level::Tiles::kDirt, 0);
+      tile_screen.Clear(0);
+      tile_screen.SetOffset(2 * 16, 2 * 16);
+      level::Tiles::Get(level::Tiles::kStoneWall)
+          ->Render(&tile_screen, t_lvl, 2, 2);
+      tile_screen.Flush(&tile_backend);
+      const size_t nw_l = tile_backend.last_commands.size();
+      Check(nw_l == 8 &&
+                tile_backend.last_commands[nw_l - 1].sprite.src_x == 400 &&
+                tile_backend.last_commands[nw_l - 1].sprite.src_y == 0,
+            "WallTile L-corner (!diag, no corner sheet) renders base_rect inner corner matching Java");
+
       gs.sprite_linker = prev_linker;
     }
 
@@ -3581,6 +3628,35 @@ int main() {
 
       util::Localization::Instance().ChangeLanguage(prev_lang);
       gs.on_add_notification = prev_cb;
+
+      // 28c. Placing Torch and Fences over floors stores target.id in data and restores the floor on removal
+      p_lvl.SetTile(12, 12, level::Tiles::kWoodPlanks, 0);
+      auto torch_item = item::Items::Get("Torch");
+      level::Tile* planks =
+          const_cast<level::Tile*>(level::Tiles::Get(level::Tiles::kWoodPlanks));
+      Check(torch_item &&
+                torch_item->InteractOn(planks, &p_lvl, 12, 12, p.get(),
+                                       entity::Direction::kDown) &&
+                p_lvl.GetTile(12, 12)->id == level::Tiles::kTorch &&
+                p_lvl.GetData(12, 12) == level::Tiles::kWoodPlanks,
+            "Placing Torch on Wood Planks stores kWoodPlanks ID as underlying tile data");
+      auto glove = item::Items::Get("Power Glove");
+      Check(glove &&
+                p_lvl.GetTile(12, 12)->Interact(p_lvl, 12, 12, *p, glove.get(),
+                                                entity::Direction::kDown) &&
+                p_lvl.GetTile(12, 12)->id == level::Tiles::kWoodPlanks,
+            "Picking up Torch with Power Glove restores underlying Wood Planks floor");
+
+      p_lvl.SetTile(13, 12, level::Tiles::kStoneBricks, 0);
+      auto stone_fence = item::Items::Get("Stone Fence");
+      level::Tile* sbricks = const_cast<level::Tile*>(
+          level::Tiles::Get(level::Tiles::kStoneBricks));
+      Check(stone_fence &&
+                stone_fence->InteractOn(sbricks, &p_lvl, 13, 12, p.get(),
+                                        entity::Direction::kDown) &&
+                p_lvl.GetTile(13, 12)->id == level::Tiles::kStoneFence &&
+                p_lvl.GetData(13, 12) == level::Tiles::kStoneBricks,
+            "Placing Stone Fence on Stone Bricks stores kStoneBricks ID as underlying tile data");
     }
 
     // 29. Save, Sleep, Boss/Statue, DeathChest notifications & 3-notif cap

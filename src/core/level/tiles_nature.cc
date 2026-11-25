@@ -348,6 +348,7 @@ class LavaTile : public Tile {
 
   void Render(gfx::Screen* screen, const Level& level, int32_t x,
               int32_t y) const override {
+    RenderDirtBackground(screen, level, x, y);
     RenderConnected(screen, level, x, y, sprite_, border_, nullptr,
                     [&](const Tile* t, int32_t nx, int32_t ny) {
                       return t->ConnectsToFluid(level, nx, ny);
@@ -525,7 +526,7 @@ class HardRockTile : public Tile {
     RenderDirtBackground(screen, level, x, y);
     RenderConnected(screen, level, x, y, sprite_, border_, &corner_,
                     [](const Tile* t, int32_t, int32_t) {
-                      return t->id == Tiles::kRock;
+                      return t->id == Tiles::kHardRock;
                     });
   }
 

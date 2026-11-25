@@ -94,14 +94,18 @@ void Tile::RenderConnected(
                          int32_t corner_x, int32_t corner_y, int32_t base_x,
                          int32_t base_y) {
     if (horiz && vert) {
-      if (!diag && corner_rect) {
+      const int32_t bx = (base_rect->width >= 16) ? base_x : 0;
+      const int32_t by = (base_rect->height >= 16) ? base_y : 0;
+      if (diag) {
+        if (singleton_with_connective) {
+          screen->Render(qx, qy, bx, by, 0, base_rect);
+        } else {
+          screen->Render(qx, qy, 1, 1, 0, border_rect);
+        }
+      } else if (corner_rect) {
         screen->Render(qx, qy, corner_x, corner_y, kMirrorBoth, corner_rect);
-      } else if (singleton_with_connective) {
-        const int32_t bx = (base_rect->width >= 16) ? base_x : 0;
-        const int32_t by = (base_rect->height >= 16) ? base_y : 0;
-        screen->Render(qx, qy, bx, by, 0, base_rect);
       } else {
-        screen->Render(qx, qy, 1, 1, 0, border_rect);
+        screen->Render(qx, qy, bx, by, 0, base_rect);
       }
     } else {
       screen->Render(qx, qy, border_x, border_y, 0, border_rect);

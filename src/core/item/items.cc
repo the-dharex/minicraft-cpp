@@ -134,11 +134,19 @@ void Items::Init() {
 
   // Seeds & placeable terrain tiles
   const std::vector<std::string> solid_tiles = {
-      "Dirt",          "Wood Planks",    "Stone Bricks", "Obsidian",
-      "White Wool",    "Red Wool",       "Blue Wool",    "Green Wool",
-      "Yellow Wool",   "Black Wool",     "Grass",        "Sand",
-      "Path",          "Ornate Stone",   "Ornate Obsidian", "Raw Obsidian",
-      "Stone"};
+      "Dirt",            "Wood Planks",     "Stone Bricks",    "Obsidian",
+      "White Wool",      "Red Wool",        "Blue Wool",       "Green Wool",
+      "Yellow Wool",     "Black Wool",      "Brown Wool",      "Purple Wool",
+      "Cyan Wool",       "Light Gray Wool", "Gray Wool",       "Pink Wool",
+      "Lime Wool",       "Light Blue Wool", "Magenta Wool",    "Orange Wool",
+      "Grass",           "Sand",            "Path",            "Ornate Stone",
+      "Ornate Obsidian", "Ornate Wood",     "Raw Obsidian",    "Stone"};
+  const TileItem::TileDataGetter place_over_with_id =
+      [](const level::Tile& /*placed*/, const level::Tile& target,
+         level::Level* /*level*/, int32_t /*xt*/, int32_t /*yt*/,
+         entity::Player* /*player*/, entity::Direction /*dir*/) -> int32_t {
+    return target.id;
+  };
 
   AddTile(items, "Acorn", "acorn", "Tree Sapling", {"Grass"});
   AddTile(items, "Dirt", "dirt", "Dirt", {"Hole", "Water", "Lava"});
@@ -151,7 +159,8 @@ void Items::Init() {
           {"Hole", "Water", "Cloud"});
   AddTile(items, "Plank Wall", "plank_wall", "Wood Wall", {"Wood Planks"});
   AddTile(items, "Wood Door", "wood_door", "Wood Door", {"Wood Planks"});
-  AddTile(items, "Wood Fence", "wood_fence", "Wood Fence", solid_tiles, true);
+  AddTile(items, "Wood Fence", "wood_fence", "Wood Fence", solid_tiles, false,
+          -1, place_over_with_id);
   AddTile(items, "Stone", "stone", "Stone",
           {"Hole", "Water", "Cloud", "Lava"});
   AddTile(items, "Stone Brick", "stone_brick", "Stone Bricks",
@@ -161,7 +170,7 @@ void Items::Init() {
   AddTile(items, "Stone Wall", "stone_wall", "Stone Wall", {"Stone Bricks"});
   AddTile(items, "Stone Door", "stone_door", "Stone Door", {"Stone Bricks"});
   AddTile(items, "Stone Fence", "stone_fence", "Stone Fence", solid_tiles,
-          true);
+          false, -1, place_over_with_id);
   AddTile(items, "Raw Obsidian", "obsidian", "Raw Obsidian",
           {"Hole", "Water", "Cloud", "Lava"});
   AddTile(items, "Obsidian Brick", "obsidian_brick", "Obsidian",
@@ -173,7 +182,7 @@ void Items::Init() {
   AddTile(items, "Obsidian Door", "obsidian_door", "Obsidian Door",
           {"Obsidian"});
   AddTile(items, "Obsidian Fence", "obsidian_fence", "Obsidian Fence",
-          solid_tiles, true);
+          solid_tiles, false, -1, place_over_with_id);
 
   AddTile(items, "Sand", "sand", "Sand", {"Hole", "Water", "Lava"});
   AddTile(items, "Cactus", "cactus", "Cactus Sapling", {"Sand"});
@@ -208,7 +217,8 @@ void Items::Init() {
           {"Farmland"}, true);
   AddTile(items, "Grass Seeds", "seed", "Grass", {"Dirt"});
 
-  AddTile(items, "Torch", "torch", "Torch", solid_tiles, true);
+  AddTile(items, "Torch", "torch", "Torch", solid_tiles, false, -1,
+          place_over_with_id);
   AddTile(items, "Sign", "sign", "Sign", solid_tiles, false, -1,
           [](const level::Tile& /*placed*/, const level::Tile& target,
              level::Level* level, int32_t xt, int32_t yt,

@@ -14,8 +14,8 @@ IDI_ICON1 ICON "minicraft.ico"
 #endif
 
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION     2,3,0,3
-  PRODUCTVERSION  2,3,0,3
+  FILEVERSION     2,3,1,3
+  PRODUCTVERSION  2,3,1,3
   FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
   FILEFLAGS       MINICRAFT_FILEFLAGS
   FILEOS          VOS_NT_WINDOWS32
@@ -28,12 +28,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName",      "Minicraft Plus Community"
       VALUE "FileDescription",  "Minicraft Plus"
-      VALUE "FileVersion",      "2.3.0-infdev3"
+      VALUE "FileVersion",      "2.3.1-infdev3"
       VALUE "InternalName",     "minicraft_pc"
       VALUE "LegalCopyright",   "Based on Minicraft by Notch & Minicraft+ Revived"
       VALUE "OriginalFilename", "minicraft_pc.exe"
       VALUE "ProductName",      "Minicraft Plus"
-      VALUE "ProductVersion",   "2.3.0-infdev3"
+      VALUE "ProductVersion",   "2.3.1-infdev3"
     END
   END
   BLOCK "VarFileInfo"

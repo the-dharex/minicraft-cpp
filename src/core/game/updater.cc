@@ -548,7 +548,8 @@ void Updater::TickGameplayInput(World& world, io::InputHandler& input) {
     }
   }
 
-  // Debug / cheat combos
+  // Debug / cheat combos... 
+  // I could prevent this from being used in the final version... but eh, what game doesn't have cheats?
   if (input.InputPressed("F3-T-1")) gs.SetTimeOfDay(TimeOfDay::kMorning);
   if (input.InputPressed("F3-T-2")) gs.SetTimeOfDay(TimeOfDay::kDay);
   if (input.InputPressed("F3-T-3")) gs.SetTimeOfDay(TimeOfDay::kEvening);
